@@ -24,6 +24,7 @@ namespace Visualiser
         virtual void OnAttach() override
         {
 			m_FrameBuffer = Lumina::FrameBuffer::Create();
+            m_FrameBuffer->Resize(900, 900);
         }
 
         virtual void OnDetach() override
@@ -46,7 +47,7 @@ namespace Visualiser
 
             ImVec2 viewportSize = ImGui::GetContentRegionAvail();
             m_FrameBuffer->Bind();
-            m_FrameBuffer->Resize((uint32_t)viewportSize.x, (uint32_t)viewportSize.y);
+            // m_FrameBuffer->Resize((uint32_t)viewportSize.x, (uint32_t)viewportSize.y);
 
             m_Background.Draw();
 			m_Frequency.Draw();
