@@ -1,5 +1,7 @@
 #include "Background.h"
 
+#include "Lumina/Renderer/RenderCommands.h"
+
 namespace Visualiser
 {
 	Background::Background()
@@ -28,17 +30,14 @@ namespace Visualiser
 		m_ShaderProgram = Lumina::ShaderProgram::Create("res/shaders/background.vert", "res/shaders/background.frag");
 
 		m_VertexArray = Lumina::VertexArray::Create();
-		m_VertexArray->AddVertexBuffer(m_VertexBuffer);
+		m_VertexArray->SetVertexBuffer(m_VertexBuffer);
 		m_VertexArray->SetIndexBuffer(m_IndexBuffer);
-
 	}
 
 	void Background::Draw()
 	{
-		m_VertexArray->Bind();
 		m_ShaderProgram->Bind();
-		m_VertexArray->DrawIndexed();
-		m_VertexArray->Unbind();
+		Lumina::RenderCommands::DrawTriangles(m_VertexArray);
 		m_ShaderProgram->Unbind();
 	}
 }

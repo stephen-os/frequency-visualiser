@@ -7,7 +7,7 @@ Lumina::Application* Lumina::CreateApplication(int argc, char** argv)
 {
     Lumina::ApplicationSpecification spec;
     spec.Name = "Lumina Application";
-    spec.Width = 900;
+    spec.Width = 1100;
     spec.Height = 900;
     spec.Api = API::OPENGL;
 

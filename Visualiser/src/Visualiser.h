@@ -9,9 +9,11 @@
 #include "Lumina/Core/Aliases.h"
 
 #include "Lumina/Renderer/FrameBuffer.h"
+#include "Lumina/Renderer/RenderCommands.h"
 
 #include "Background.h"
 #include "Frequency.h"
+#include "Line.h"
 
 #include <fstream>
 #include <cstdint>
@@ -36,6 +38,8 @@ namespace Visualiser
             float elapsedTime = m_FrameTimer.Elapsed();
             m_FPS = 1.0f / elapsedTime;
             m_FrameTimer.Reset();
+
+            m_Line.Update(); 
         }
 
         virtual void OnUIRender() override
@@ -43,13 +47,19 @@ namespace Visualiser
 			m_Frequency.DrawUI();
 
             ImGui::Begin("Viewport");
-
-            ImVec2 viewportSize = ImGui::GetContentRegionAvail();
+           
             m_FrameBuffer->Bind();
-            m_FrameBuffer->Resize((uint32_t)viewportSize.x, (uint32_t)viewportSize.y);
+            Lumina::RenderCommands::Clear(); 
+            
+            ImVec2 viewportSize = ImGui::GetContentRegionAvail();
 
-            m_Background.Draw();
-			m_Frequency.Draw();
+            m_FrameBuffer->Resize((uint32_t)viewportSize.x, (uint32_t)viewportSize.x);
+            Lumina::RenderCommands::SetViewport(0, 0, (uint32_t)viewportSize.x, (uint32_t)viewportSize.x);
+
+
+            // m_Background.Draw();
+			// m_Frequency.Draw();
+            m_Line.Draw(); 
 
             ImGui::Image((void*)(intptr_t)m_FrameBuffer->GetColorAttachment(), ImVec2(m_FrameBuffer->GetWidth(), m_FrameBuffer->GetHeight()));
             ImGui::End();
@@ -64,6 +74,7 @@ namespace Visualiser
     private:
 		Background m_Background;
 		Frequency m_Frequency;
+        Line m_Line; 
 
         Lumina::Shared<Lumina::FrameBuffer> m_FrameBuffer;
 

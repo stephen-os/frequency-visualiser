@@ -2,6 +2,8 @@
 
 #include "imgui.h"
 
+#include "Lumina/Renderer/RenderCommands.h"
+
 namespace Visualiser
 {
 	Frequency::Frequency()
@@ -36,7 +38,7 @@ namespace Visualiser
 		m_DrawShader = m_SineShader; 
 
 		m_VertexArray = Lumina::VertexArray::Create();
-		m_VertexArray->AddVertexBuffer(m_VertexBuffer);
+		m_VertexArray->SetVertexBuffer(m_VertexBuffer);
 		m_VertexArray->SetIndexBuffer(m_IndexBuffer);
 
 	}
@@ -72,7 +74,6 @@ namespace Visualiser
 
 	void Frequency::Draw()
 	{
-		m_VertexArray->Bind();
 		float time = m_TotalTimer.Elapsed() * m_Speed;
 		
 		m_DrawShader->Bind();
@@ -82,9 +83,8 @@ namespace Visualiser
 		m_DrawShader->SetUniformFloat("u_Thickness", m_Thickness);
 		m_DrawShader->SetUniformVec3("u_Color", m_Color);
 
-		m_VertexArray->DrawIndexed();
+		Lumina::RenderCommands::DrawTriangles(m_VertexArray);
 
-		m_VertexArray->Unbind();
 		m_DrawShader->Unbind();
 	}
 }
