@@ -1,22 +1,24 @@
 #version 430 core
 
-in vec2 v_UV;
-
 out vec4 FragColor;
 
-uniform float grid_intensity = 0.7;
-uniform float grid_size = 0.02;
-uniform float line_thickness = 0.002;
+uniform vec2 u_resolution;       // Resolution of the screen
+uniform float u_gridSpacing;     // Spacing between minor grid lines
+uniform float u_thickness;       // Thickness of minor grid lines
+uniform float u_centerThickness; // Thickness of the central plus
 
-void main()
+void main() 
 {
-    vec2 grid = fract(v_UV / grid_size);
-    
-    vec2 gridLines = smoothstep(0.0, line_thickness / grid_size, grid) * smoothstep(0.0, line_thickness / grid_size, 1.0 - grid);
-    
-    float isLine = 1.0 - min(gridLines.x, gridLines.y);
-    
-    vec3 lineColor = vec3(isLine * grid_intensity);
-    
-    FragColor = vec4(lineColor, 1.0);
+    vec2 fragCoord = gl_FragCoord.xy;
+    vec2 centered = fragCoord - u_resolution * 0.5;
+
+    float lineX = abs(mod(centered.x, u_gridSpacing));
+    float lineY = abs(mod(centered.y, u_gridSpacing));
+
+    float minorLine = step(lineX, u_thickness) + step(lineY, u_thickness);
+    float centerLine = step(abs(centered.x), u_centerThickness) + step(abs(centered.y), u_centerThickness);
+
+    float intensity = max(minorLine * 0.5, centerLine);
+
+    FragColor = vec4(vec3(intensity), 1.0);
 }

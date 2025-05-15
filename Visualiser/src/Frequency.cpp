@@ -1,90 +1,147 @@
 #include "Frequency.h"
 
-#include "imgui.h"
-
+#include "Lumina/Renderer/Renderer.h"
 #include "Lumina/Renderer/RenderCommands.h"
+
+#include <glm/gtc/constants.hpp>
+
+#include <cmath>
+#include "imgui.h"
+#include <glad/glad.h>
 
 namespace Visualiser
 {
 	Frequency::Frequency()
 	{
-		float vertices[] = {
-			-1.0f, -1.0f, // bottom-left
-			 1.0f, -1.0f, // bottom-right
-			 1.0f,  1.0f, // top-right
-			-1.0f,  1.0f  // top-left
-		};
+		// Initialize vertex data
+		m_Vertices.resize(m_VertexCount);
 
-		uint32_t indices[] = {
-			0, 1, 2, // first triangle
-			2, 3, 0  // second triangle
-		};
+		float xStart = -1.0f;
+		float xEnd = 1.0f;
+		float step = (xEnd - xStart) / (m_VertexCount - 1);
+
+		for (int i = 0; i < m_VertexCount; ++i)
+		{
+			float x = xStart + i * step;
+			m_Vertices[i] = glm::vec2(x, 0.0f);
+		}
 
 		Lumina::BufferLayout layout = {
 			{ Lumina::BufferDataType::Float2, "a_Position" }
 		};
 
-		m_VertexBuffer = Lumina::VertexBuffer::Create(vertices, sizeof(vertices));
+		m_VertexBuffer = Lumina::VertexBuffer::Create(m_Vertices.data(), m_Vertices.size() * sizeof(glm::vec2));
 		m_VertexBuffer->SetLayout(layout);
-
-		m_IndexBuffer = Lumina::IndexBuffer::Create(indices, 6);
-
-		m_SineShader = Lumina::ShaderProgram::Create("res/shaders/wave.vert", "res/shaders/sine.frag");
-		m_CosineShader = Lumina::ShaderProgram::Create("res/shaders/wave.vert", "res/shaders/cosine.frag");
-		m_SquareShader = Lumina::ShaderProgram::Create("res/shaders/wave.vert", "res/shaders/square.frag");
-		m_TriangleShader = Lumina::ShaderProgram::Create("res/shaders/wave.vert", "res/shaders/triangle.frag");
-		m_SawToothShader = Lumina::ShaderProgram::Create("res/shaders/wave.vert", "res/shaders/saw_tooth.frag");
-
-		m_DrawShader = m_SineShader; 
 
 		m_VertexArray = Lumina::VertexArray::Create();
 		m_VertexArray->SetVertexBuffer(m_VertexBuffer);
-		m_VertexArray->SetIndexBuffer(m_IndexBuffer);
 
+		m_LineShader = Lumina::ShaderProgram::Create("res/shaders/line.vert", "res/shaders/line.frag");
+	}
+
+	void Frequency::Update()
+	{
+		float time = m_TotalTimer.Elapsed() * m_Speed;
+		constexpr float pi = glm::pi<float>();
+
+		for (int i = 0; i < m_VertexCount; ++i)
+		{
+			float x = m_Vertices[i].x;
+			float t = m_Period * x + time;
+			float y = 0.0f;
+
+			switch (m_Type)
+			{
+			case SINE:
+				y = sinf(t);
+				break;
+			case COSINE:
+				y = cosf(t);
+				break;
+			case SQUARE:
+				y = sinf(t) > 0.0f ? 1.0f : -1.0f;
+				break;
+			case TRIANGLE:
+				y = asinf(sinf(t)) * (2.0f / pi);
+				break;
+			case SAWTOOTH:
+				y = 2.0f * (t / (2.0f * pi) - floorf(0.5f + t / (2.0f * pi)));
+				break;
+			case PULSE:
+				y = fmod(t, 2.0f * pi) < (2.0f * pi * m_DutyCycle) ? 1.0f : -1.0f;
+				break;
+			case NOISE:
+				y = (static_cast<float>(std::rand()) / RAND_MAX) * 2.0f - 1.0f;
+				break;
+			case EXPONENTIAL:
+				y = sinf(t) * expf(-fabs(x));
+				break;
+			case ASINE:
+				y = fabs(sinf(t));
+				break;
+			}
+
+			if (m_Invert)
+				y = -y;
+
+			m_Vertices[i].y = m_Amplitude * y;
+		}
+
+		m_VertexBuffer->SetData(m_Vertices.data(), m_VertexCount * sizeof(glm::vec2));
 	}
 
 	void Frequency::DrawUI()
 	{
-		ImGui::Begin("Frequency Controls");
-
-		ImGui::SliderFloat("Amplitude", &m_Amplitude, 0.0f, 1.0f, "%.2f");
-		ImGui::SliderFloat("Period", &m_Period, 1.0f, 50.0f, "%.2f");
-		ImGui::SliderFloat("Thickness", &m_Thickness, 0.001f, 0.05f, "%.3f");
-		ImGui::ColorEdit3("Wave Color", &m_Color[0]);
-		ImGui::SliderFloat("Speed", &m_Speed, 0.0f, 10.0f, "%.2f");
-
-		const char* waveTypes[] = { "Sine", "Cosine", "Square", "Triangle", "Sawtooth" };
-		int current = static_cast<int>(m_CurrentWave);
-		if (ImGui::Combo("Wave Type", &current, waveTypes, IM_ARRAYSIZE(waveTypes)))
+		if (ImGui::Begin("Line Settings"))
 		{
-			m_CurrentWave = static_cast<WaveType>(current);
-
-			switch (m_CurrentWave)
+			static int count = m_VertexCount;
+			if (ImGui::SliderInt("Samples", &count, 2, s_MaxVertexCount))
 			{
-			case WaveType::Sine:     m_DrawShader = m_SineShader; break;
-			case WaveType::Cosine:   m_DrawShader = m_CosineShader; break;
-			case WaveType::Square:   m_DrawShader = m_SquareShader; break;
-			case WaveType::Triangle: m_DrawShader = m_TriangleShader; break;
-			case WaveType::Sawtooth: m_DrawShader = m_SawToothShader; break;
-			}
-		}
+				m_VertexCount = count;
+				m_Vertices.resize(m_VertexCount);
 
+				float xStart = -1.0f;
+				float xEnd = 1.0f;
+				float step = (xEnd - xStart) / (m_VertexCount - 1);
+				for (int i = 0; i < m_VertexCount; ++i)
+				{
+					float x = xStart + i * step;
+					m_Vertices[i] = glm::vec2(x, 0.0f);
+				}
+
+				m_VertexBuffer->SetData(m_Vertices.data(), m_VertexCount * sizeof(glm::vec2));
+			}
+
+			const char* waveNames[] = 
+			{
+				"Sine", "Cosine", "Square", "Triangle", "Sawtooth",
+				"Pulse", "Noise", "Exponential", "Abs Sine"
+			};
+			int current = static_cast<int>(m_Type);
+			if (ImGui::Combo("Type", &current, waveNames, IM_ARRAYSIZE(waveNames)))
+			{
+				m_Type = static_cast<FrequencyType>(current);
+			}
+
+			ImGui::Checkbox("Invert", &m_Invert);
+			ImGui::SliderFloat("Speed", &m_Speed, 0.0f, 10.0f);
+			ImGui::SliderFloat("Amplitude", &m_Amplitude, 0.0f, 1.0f);
+			ImGui::SliderFloat("Period", &m_Period, 1.0f, 50.0f);
+			ImGui::SliderFloat("Thickness", &m_Thickness, 0.01f, 10.0f, "%.4f");
+			ImGui::ColorEdit3("Color", &m_Color[0]);
+
+			if (m_Type == PULSE)
+				ImGui::SliderFloat("Duty Cycle", &m_DutyCycle, 0.01f, 0.99f);
+		}
 		ImGui::End();
 	}
 
 	void Frequency::Draw()
 	{
-		float time = m_TotalTimer.Elapsed() * m_Speed;
-		
-		m_DrawShader->Bind();
-		m_DrawShader->SetUniformFloat("u_Time", time);
-		m_DrawShader->SetUniformFloat("u_Amplitude", m_Amplitude);
-		m_DrawShader->SetUniformFloat("u_Period", m_Period);
-		m_DrawShader->SetUniformFloat("u_Thickness", m_Thickness);
-		m_DrawShader->SetUniformVec3("u_Color", m_Color);
-
-		Lumina::RenderCommands::DrawTriangles(m_VertexArray);
-
-		m_DrawShader->Unbind();
+		m_LineShader->Bind();
+		m_LineShader->SetUniformVec3("u_Color", m_Color);
+		// glEnable(GL_LINE_SMOOTH);
+		glLineWidth(m_Thickness);
+		Lumina::RenderCommands::DrawLineStrips(m_VertexArray, m_VertexCount);
 	}
 }

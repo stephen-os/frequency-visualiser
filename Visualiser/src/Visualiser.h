@@ -13,7 +13,6 @@
 
 #include "Background.h"
 #include "Frequency.h"
-#include "Line.h"
 
 #include <fstream>
 #include <cstdint>
@@ -39,13 +38,13 @@ namespace Visualiser
             m_FPS = 1.0f / elapsedTime;
             m_FrameTimer.Reset();
 
-            m_Line.Update(); 
+            m_Frequency.Update();
         }
 
         virtual void OnUIRender() override
         {
 			m_Frequency.DrawUI();
-
+            
             ImGui::Begin("Viewport");
            
             m_FrameBuffer->Bind();
@@ -57,10 +56,9 @@ namespace Visualiser
             Lumina::RenderCommands::SetViewport(0, 0, (uint32_t)viewportSize.x, (uint32_t)viewportSize.x);
 
 
-            // m_Background.Draw();
-			// m_Frequency.Draw();
-            m_Line.Draw(); 
-
+            m_Background.Draw();
+			m_Frequency.Draw();
+            
             ImGui::Image((void*)(intptr_t)m_FrameBuffer->GetColorAttachment(), ImVec2(m_FrameBuffer->GetWidth(), m_FrameBuffer->GetHeight()));
             ImGui::End();
 
@@ -74,7 +72,6 @@ namespace Visualiser
     private:
 		Background m_Background;
 		Frequency m_Frequency;
-        Line m_Line; 
 
         Lumina::Shared<Lumina::FrameBuffer> m_FrameBuffer;
 

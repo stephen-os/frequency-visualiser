@@ -2,6 +2,8 @@
 
 #include "Lumina/Renderer/RenderCommands.h"
 
+#include "imgui.h"
+
 namespace Visualiser
 {
 	Background::Background()
@@ -37,6 +39,13 @@ namespace Visualiser
 	void Background::Draw()
 	{
 		m_ShaderProgram->Bind();
+		
+		ImVec2 viewportSize = ImGui::GetContentRegionAvail();
+		m_ShaderProgram->SetUniformVec2("u_resolution", glm::vec2(viewportSize.x, viewportSize.x));
+		m_ShaderProgram->SetUniformFloat("u_gridSpacing", 40.0f);
+		m_ShaderProgram->SetUniformFloat("u_thickness", 1.0f);
+		m_ShaderProgram->SetUniformFloat("u_centerThickness", 2.0f);
+
 		Lumina::RenderCommands::DrawTriangles(m_VertexArray);
 		m_ShaderProgram->Unbind();
 	}
